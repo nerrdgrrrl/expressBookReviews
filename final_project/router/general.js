@@ -31,7 +31,17 @@ public_users.get('/', async function (req, res) {
       return res.status(500).json({message: "Error fetching book list", error: error.message});
     }
   });
-
+// Internal endpoint - raw ISBN lookup
+public_users.get('/isbn-data/:isbn', function (req, res) {
+    const isbn = req.params.isbn;
+    const book = books[isbn];
+  
+    if (book) {
+      return res.status(200).send(JSON.stringify(book, null, 4));
+    } else {
+      return res.status(404).json({message: `Book with ISBN ${isbn} not found`});
+    }
+  });
 // Get book details based on ISBN — async/await version
 public_users.get('/isbn/:isbn', async function (req, res) {
     const isbn = req.params.isbn;
@@ -48,7 +58,7 @@ public_users.get('/isbn/:isbn', async function (req, res) {
     }
   });
   
-// Get book details based on author
+// Internal endpoint - raw author lookup
 public_users.get('/author/:author',function (req, res) {
     const author = req.params.author;
   
@@ -69,7 +79,22 @@ public_users.get('/author/:author',function (req, res) {
       return res.status(404).json({message: `No books found for author: ${author}`});
     }
   });
+// Get book details based on author — async/await version
+public_users.get('/author/:author', async function (req, res) {
+    const author = req.params.author;
+  
+    try {
+      const response = await axios.get(`http://localhost:5000/author-data/${encodeURIComponent(author)}`);
+      return res.status(200).send(JSON.stringify(response.data, null, 4));
+    } catch (error) {
+      if (error.response) {
+        return res.status(error.response.status).json(error.response.data);
+      }
+      return res.status(500).json({message: "Error fetching books by author", error: error.message});
+    }
+  });
 
+  
 // Get all books based on title
 public_users.get('/title/:title',function (req, res) {
     const title = req.params.title;
