@@ -94,28 +94,40 @@ public_users.get('/author/:author', async function (req, res) {
     }
   });
 
-  
-// Get all books based on title
-public_users.get('/title/:title',function (req, res) {
+
+// Internal endpoint - raw title lookup
+public_users.get('/title-data/:title', function (req, res) {
+  const title = req.params.title;
+
+  const isbns = Object.keys(books);
+
+  const matchingBooks = isbns
+    .filter(isbn => books[isbn].title === title)
+    .reduce((result, isbn) => {
+      result[isbn] = books[isbn];
+      return result;
+    }, {});
+
+  if (Object.keys(matchingBooks).length > 0) {
+    return res.status(200).send(JSON.stringify(matchingBooks, null, 4));
+  } else {
+    return res.status(404).json({message: `No books found with title: ${title}`});
+  }
+});
+// Get all books based on title — async/await version
+public_users.get('/title/:title', async function (req, res) {
     const title = req.params.title;
   
-    // Get all the keys (ISBNs) from the books object
-    const isbns = Object.keys(books);
-  
-    // Filter down to books whose title matches the one in the request
-    const matchingBooks = isbns
-      .filter(isbn => books[isbn].title === title)
-      .reduce((result, isbn) => {
-        result[isbn] = books[isbn];
-        return result;
-      }, {});
-  
-    if (Object.keys(matchingBooks).length > 0) {
-      return res.status(200).send(JSON.stringify(matchingBooks, null, 4));
-    } else {
-      return res.status(404).json({message: `No books found for title: ${title}`});
+    try {
+      const response = await axios.get(`http://localhost:5000/title-data/${encodeURIComponent(title)}`);
+      return res.status(200).send(JSON.stringify(response.data, null, 4));
+    } catch (error) {
+      if (error.response) {
+        return res.status(error.response.status).json(error.response.data);
+      }
+      return res.status(500).json({message: "Error fetching books by title", error: error.message});
     }
-});
+  });
 
 //  Get book review
 public_users.get('/review/:isbn',function (req, res) {
